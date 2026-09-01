@@ -12,6 +12,12 @@ async def get_roles(session: AsyncSession, server_id: int) -> list[int]:
     return [channel[0] for channel in res]
 
 
+async def get_tiers(session: AsyncSession, server_id: int) -> list[TierRole]:
+    stmt = select(TierRole).filter(TierRole.server_id == server_id)
+    res = (await session.execute(stmt)).scalars().all()
+    return [item for item in res]
+
+
 async def get_tier(
     session: AsyncSession, server_id: int, tier_id: int
 ) -> TierRole | None:
@@ -25,8 +31,10 @@ async def get_tier(
     return result.scalar_one_or_none()
 
 
-async def add_tier(session: AsyncSession, server_id: int, tier_id: int, role_id: int):
-    channel = dict(server_id=server_id, id=tier_id, role_id=role_id)
+async def add_tier(
+    session: AsyncSession, server_id: int, tier_id: int, role_id: int, title: str
+):
+    channel = dict(server_id=server_id, id=tier_id, role_id=role_id, title=title)
     stmt = insert(TierRole).values(channel)
     try:
         await session.execute(stmt)

@@ -3,7 +3,7 @@ import logging
 import discord
 from discord import app_commands
 from discord.ext import commands
-from utils.tier_roles import add_tier, get_roles, get_tier, remove_tier
+from utils.tier_roles import add_tier, get_roles, get_tier, get_tiers, remove_tier
 
 from bot import PatreonMemberRolesBot
 
@@ -114,6 +114,7 @@ class Admin(commands.Cog):
         if tier_id not in tier_ids:
             await interaction.followup.send("Tier wasn't found", ephemeral=True)
             return
+        tier_title = [tier.title for tier in tiers if tier.id == tier_id][0]
 
         async with self.bot.db.create_session() as session:
             existing_channel = await get_tier(
@@ -123,12 +124,7 @@ class Admin(commands.Cog):
                 await interaction.followup.send("Role is already added", ephemeral=True)
                 return
 
-            await add_tier(
-                session,
-                interaction.guild_id,
-                tier_id,
-                role_id,
-            )
+            await add_tier(session, interaction.guild_id, tier_id, role_id, tier_title)
             await interaction.followup.send("Added the role", ephemeral=True)
 
     @tier_group.command(name="list", description="List tiers")
@@ -142,11 +138,11 @@ class Admin(commands.Cog):
             return  # is already set to guild_only
         async with self.bot.db.create_session() as session:
             description = ""
-            role_ids = await get_roles(session, interaction.guild_id)
-            for role_id in role_ids:
-                description += f"<@&{role_id}>\n"
+            tiers = await get_tiers(session, interaction.guild_id)
+            for tier in tiers:
+                description += f"<@&{tier.role_id}> -> {tier.title}\n"
 
-            if len(role_ids) <= 0:
+            if len(tiers) <= 0:
                 await interaction.followup.send("No tiers set-up", ephemeral=True)
                 return
 
