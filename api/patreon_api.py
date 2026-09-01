@@ -5,9 +5,27 @@ import aiohttp
 from api import Singleton
 
 
+class PatreonTier:
+    id: int
+    title: str
+
+    def __init__(self, id, title):
+        self.id = id
+        self.title = title
+
+
+class CampaignTierCache:
+    timestamp: datetime
+    tiers: list[PatreonTier]
+
+    def __init__(self, timestamp, tiers):
+        self.timestamp = timestamp
+        self.tiers = tiers
+
+
 class PatreonApi(metaclass=Singleton):
     session: aiohttp.ClientSession
-    campaign_tier_cache: dict = {}
+    campaign_tier_cache: dict[str, CampaignTierCache] = {}
 
     def __init__(self, campaign_id: str, access_token: str):
         self.campaign_id = campaign_id
@@ -28,14 +46,12 @@ class PatreonApi(metaclass=Singleton):
             auth_data = await response.json()
             print(auth_data)
 
-    async def fetch_tiers(self):
-        cache_entry = self.campaign_tier_cache.get(self.campaign_id, {})
+    async def fetch_tiers(self) -> list[PatreonTier]:
+        cache_entry = self.campaign_tier_cache.get(self.campaign_id, None)
         current_time = datetime.now()
         if cache_entry is not None:
-            if (current_time - cache_entry.get("timestamp", None)) < timedelta(
-                minutes=30
-            ):
-                return cache_entry.get("tiers", [])
+            if (current_time - cache_entry.timestamp) < timedelta(minutes=30):
+                return cache_entry.tiers
 
         url = f"/api/oauth2/v2/campaigns/{self.campaign_id}"
         params = {
@@ -50,16 +66,15 @@ class PatreonApi(metaclass=Singleton):
                 if included.get("type") != "tier":
                     continue
                 tiers.append(
-                    {
-                        "id": included.get("id"),
-                        "title": included.get("attributes", {}).get("title", ""),
-                    }
+                    PatreonTier(
+                        int(included.get("id")),
+                        included.get("attributes", {}).get("title", ""),
+                    )
                 )
 
-        self.campaign_tier_cache[self.campaign_id] = {
-            "timestamp": datetime.now(),
-            "tiers": tiers,
-        }
+        self.campaign_tier_cache[self.campaign_id] = CampaignTierCache(
+            datetime.now(), tiers
+        )
         return tiers
 
     async def fetch_members(self) -> dict:
