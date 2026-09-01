@@ -10,7 +10,7 @@ class PatreonUser(Base):
     __tablename__ = "patreon_users"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     discord_id: Mapped[int] = mapped_column(BigInteger)
-    server_id: Mapped[int] = mapped_column(ForeignKey("server_settings.id"))
+    server_id: Mapped[int] = mapped_column(ForeignKey("server_settings.server_id"))
     server: Mapped["ServerSetting"] = relationship(
         "ServerSetting", cascade="all, delete-orphan"
     )
