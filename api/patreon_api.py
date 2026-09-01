@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import aiohttp
 
 from api import Singleton
@@ -5,6 +7,7 @@ from api import Singleton
 
 class PatreonApi(metaclass=Singleton):
     session: aiohttp.ClientSession
+    campaign_tier_cache: dict = {}
 
     def __init__(self, campaign_id: str, access_token: str):
         self.campaign_id = campaign_id
@@ -26,6 +29,14 @@ class PatreonApi(metaclass=Singleton):
             print(auth_data)
 
     async def fetch_tiers(self):
+        cache_entry = self.campaign_tier_cache.get(self.campaign_id, {})
+        current_time = datetime.now()
+        if cache_entry is not None:
+            if (current_time - cache_entry.get("timestamp", None)) < timedelta(
+                minutes=30
+            ):
+                return cache_entry.get("tiers", [])
+
         url = f"/api/oauth2/v2/campaigns/{self.campaign_id}"
         params = {
             "include": "tiers",
@@ -44,6 +55,11 @@ class PatreonApi(metaclass=Singleton):
                         "title": included.get("attributes", {}).get("title", ""),
                     }
                 )
+
+        self.campaign_tier_cache[self.campaign_id] = {
+            "timestamp": datetime.now(),
+            "tiers": tiers,
+        }
         return tiers
 
     async def fetch_members(self) -> dict:

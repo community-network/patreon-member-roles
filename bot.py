@@ -5,6 +5,7 @@ import os
 import discord
 from discord.ext import commands
 
+from api.patreon_api import PatreonApi
 from config import load_config
 from database.connection import DatabaseSingleton
 from logger import setup_logger
@@ -23,9 +24,14 @@ class PatreonMemberRolesBot(commands.AutoShardedBot):
         self.logger = logger
         self.config = env_config
         self.db = DatabaseSingleton(env_config.db)
+        self.patreon_api = PatreonApi(
+            campaign_id=self.config.bot.patreon_campaign_id,
+            access_token=self.config.bot.patreon_access_token,
+        )
         super().__init__(*args, **kwargs)
 
     async def setup_hook(self):
+        await self.patreon_api.async_init__()
         await self.db.init_db()
         self.remove_command("help")
         await self.load_cogs()
