@@ -23,6 +23,15 @@ class CampaignTierCache:
         self.tiers = tiers
 
 
+class MemberInfo:
+    tiers: list[str]
+    discord_id: int | None
+
+    def __init__(self, tiers, discord_id):
+        self.tiers = tiers
+        self.discord_id = discord_id
+
+
 class PatreonApi(metaclass=Singleton):
     session: aiohttp.ClientSession
     campaign_tier_cache: dict[str, CampaignTierCache] = {}
@@ -77,7 +86,7 @@ class PatreonApi(metaclass=Singleton):
         )
         return tiers
 
-    async def fetch_members(self) -> dict:
+    async def fetch_members(self) -> dict[str, MemberInfo]:
         url = f"/api/oauth2/v2/campaigns/{self.campaign_id}/members"
         params = {
             "include": "user,currently_entitled_tiers",
@@ -85,7 +94,7 @@ class PatreonApi(metaclass=Singleton):
         }
 
         headers = {"Authorization": f"Bearer {self.access_token}"}
-        patreons = {}
+        patreons: dict[str, MemberInfo] = {}
 
         end_cursor = False
         while not end_cursor:
@@ -117,15 +126,15 @@ class PatreonApi(metaclass=Singleton):
 
                         discord_user_id = int(discord_data.get("user_id", ""))
 
-                    patreons[data["relationships"]["user"]["data"]["id"]] = {
-                        "tiers": [
+                    patreons[data["relationships"]["user"]["data"]["id"]] = MemberInfo(
+                        (
                             d["id"]
                             for d in data["relationships"]["currently_entitled_tiers"][
                                 "data"
                             ]
-                        ],
-                        "discord": discord_user_id,
-                    }
+                        ),
+                        discord_user_id,
+                    )
 
                 pagination_data = patreon_data["meta"]["pagination"]
                 if (

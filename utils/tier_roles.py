@@ -33,12 +33,13 @@ async def get_tier(
 
 async def add_tier(
     session: AsyncSession, server_id: int, tier_id: int, role_id: int, title: str
-):
+) -> TierRole | None:
     channel = dict(server_id=server_id, id=tier_id, role_id=role_id, title=title)
-    stmt = insert(TierRole).values(channel)
+    stmt = insert(TierRole).values(channel).returning(TierRole)
     try:
-        await session.execute(stmt)
+        result = await session.execute(stmt)
         await session.commit()
+        return result.scalar_one()
     except IntegrityError:
         pass
 
