@@ -15,6 +15,7 @@ association_table = Table(
 class PatreonUser(Base):
     __tablename__ = "patreon_users"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    patreon_id: Mapped[int] = mapped_column(BigInteger)
     discord_id: Mapped[int] = mapped_column(BigInteger)
     server_id: Mapped[int] = mapped_column(
         ForeignKey("server_settings.server_id", ondelete="cascade"), nullable=False

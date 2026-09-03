@@ -17,7 +17,7 @@ async def get_user(
 ) -> PatreonUser | None:
     stmt = (
         select(PatreonUser)
-        .filter(PatreonUser.id == id)
+        .filter(PatreonUser.patreon_id == id)
         .filter(PatreonUser.server_id == server_id)
         .limit(1)
     )
@@ -31,7 +31,7 @@ async def add_user(
     discord_id: int,
     server_id: int,
 ) -> PatreonUser | None:
-    channel = dict(server_id=server_id, id=id, discord_id=discord_id)
+    channel = dict(server_id=server_id, patreon_id=id, discord_id=discord_id)
     stmt = insert(PatreonUser).values(channel).returning(PatreonUser)
     try:
         result = await session.execute(stmt)

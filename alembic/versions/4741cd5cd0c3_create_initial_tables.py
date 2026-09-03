@@ -1,8 +1,8 @@
 """create initial tables
 
-Revision ID: a8656cbd8f94
+Revision ID: 4741cd5cd0c3
 Revises: 
-Create Date: 2026-09-02 09:17:39.960000
+Create Date: 2026-09-03 16:15:31.266332
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a8656cbd8f94'
+revision: str = '4741cd5cd0c3'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -30,6 +30,7 @@ def upgrade() -> None:
     )
     op.create_table('patreon_users',
     sa.Column('id', sa.BigInteger(), nullable=False),
+    sa.Column('patreon_id', sa.BigInteger(), nullable=False),
     sa.Column('discord_id', sa.BigInteger(), nullable=False),
     sa.Column('server_id', sa.BigInteger(), nullable=False),
     sa.ForeignKeyConstraint(['server_id'], ['server_settings.server_id'], ondelete='cascade'),
@@ -37,6 +38,7 @@ def upgrade() -> None:
     )
     op.create_table('tier_roles',
     sa.Column('id', sa.BigInteger(), nullable=False),
+    sa.Column('patreon_id', sa.BigInteger(), nullable=False),
     sa.Column('title', sa.String(), nullable=False),
     sa.Column('role_id', sa.BigInteger(), nullable=False),
     sa.Column('server_id', sa.BigInteger(), nullable=False),
