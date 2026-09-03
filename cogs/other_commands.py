@@ -20,10 +20,9 @@ class OtherCommands(commands.Cog):
         embed = discord.Embed(
             color=0xFFA500,
             title="Help for the Join-to-create bot",
-            description="This bot will automatically can track specific voice channels you make. "
-            'And if a user joins it, it will create a channel named "user\'s channel".'
-            "And it will automatically remove the user's channel if empty."
-            'To set up the bot, use "/admin create_channels add" to add a voice channel.',
+            description="This is a bot that will watch for changes in your patreon members,"
+            "and will attach the correct discord role to someone that subscribes to a tier on patreon. "
+            'To set up the bot, use "/admin tiers add" to add a connection between a tier and a discord role.',
         )
         await interaction.followup.send(embed=embed)
 
