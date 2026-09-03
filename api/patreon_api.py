@@ -127,12 +127,12 @@ class PatreonApi(metaclass=Singleton):
                         discord_user_id = int(discord_data.get("user_id", ""))
 
                     patreons[data["relationships"]["user"]["data"]["id"]] = MemberInfo(
-                        (
+                        [
                             d["id"]
                             for d in data["relationships"]["currently_entitled_tiers"][
                                 "data"
                             ]
-                        ),
+                        ],
                         discord_user_id,
                     )
 

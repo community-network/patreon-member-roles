@@ -2,12 +2,16 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy.orm import selectinload
 from database.dto.patreon_users import PatreonUser
 
 
 async def get_users(session: AsyncSession, server_id: int) -> list[PatreonUser]:
-    stmt = select(PatreonUser).filter(PatreonUser.server_id == server_id)
+    stmt = (
+        select(PatreonUser)
+        .options(selectinload(PatreonUser.tiers))
+        .filter(PatreonUser.server_id == server_id)
+    )
     res = (await session.execute(stmt)).scalars().all()
     return [item for item in res]
 
@@ -17,6 +21,7 @@ async def get_user(
 ) -> PatreonUser | None:
     stmt = (
         select(PatreonUser)
+        .options(selectinload(PatreonUser.tiers))
         .filter(PatreonUser.patreon_id == id)
         .filter(PatreonUser.server_id == server_id)
         .limit(1)

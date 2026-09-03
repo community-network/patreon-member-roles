@@ -6,12 +6,10 @@ from discord import Guild, Member
 from discord.ext import commands, tasks
 
 from bot import PatreonMemberRolesBot
-from database.dto.patreon_users import PatreonUser
 from database.dto.tier_roles import TierRole
 from utils.patreon_users import add_user, get_user, get_users, remove_user
 from utils.server_settings import get_server_ids
 from utils.tier_roles import get_tiers
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class BackgroundUserUpdate(commands.Cog):
@@ -30,13 +28,13 @@ class BackgroundUserUpdate(commands.Cog):
         db_tiers: list[TierRole],
         discord_member: Member,
     ):
-        db_tiers = [cur for cur in db_tiers if cur.patreon_id in tiers]
-        new_toles = [guild.get_role(db_tier.role_id) for db_tier in db_tiers]
-        if len(new_toles) <= 0:
+        db_tiers = [cur for cur in db_tiers if str(cur.patreon_id) in tiers]
+        new_roles = [guild.get_role(db_tier.role_id) for db_tier in db_tiers]
+        if len(new_roles) <= 0:
             return []
 
         await discord_member.add_roles(
-            *[role for role in new_toles if role is not None]
+            *[role for role in new_roles if role is not None]
         )
         return db_tiers
 
@@ -47,13 +45,13 @@ class BackgroundUserUpdate(commands.Cog):
         db_tiers: list[TierRole],
         discord_member: Member,
     ):
-        db_tiers = [cur for cur in db_tiers if cur.patreon_id in tiers]
-        new_toles = [guild.get_role(db_tier.role_id) for db_tier in db_tiers]
-        if len(new_toles) <= 0:
+        db_tiers = [cur for cur in db_tiers if str(cur.patreon_id) in tiers]
+        new_roles = [guild.get_role(db_tier.role_id) for db_tier in db_tiers]
+        if len(new_roles) <= 0:
             return []
 
         await discord_member.remove_roles(
-            *[role for role in new_toles if role is not None]
+            *[role for role in new_roles if role is not None]
         )
         return db_tiers
 
@@ -71,11 +69,16 @@ class BackgroundUserUpdate(commands.Cog):
                     continue
 
                 members = await self.bot.patreon_api.fetch_members()
+                members_with_discord = {
+                    k: v for k, v in members.items() if v.discord_id is not None
+                }
 
                 # remove removed members
                 db_users = await get_users(session, server_id)
                 removed_users = [
-                    db_user for db_user in db_users if db_user.patreon_id not in members
+                    db_user
+                    for db_user in db_users
+                    if str(db_user.patreon_id) not in members_with_discord.keys()
                 ]
                 for db_user in removed_users:
                     removed_tiers = [
@@ -90,7 +93,7 @@ class BackgroundUserUpdate(commands.Cog):
                     await remove_user(session, server_id, db_user.patreon_id)
 
                 # add or update members
-                for id, member in members.items():
+                for id, member in members_with_discord.items():
                     if member.discord_id is None:
                         continue
                     db_user = await get_user(session, server_id, int(id))
