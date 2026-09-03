@@ -52,6 +52,7 @@ class PatreonMemberRolesBot(commands.AutoShardedBot):
 
 
 intents = discord.Intents.default()
+intents.members = True
 bot = PatreonMemberRolesBot(command_prefix="!", intents=intents)
 
 
