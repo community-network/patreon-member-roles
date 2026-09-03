@@ -81,53 +81,59 @@ class BackgroundUserUpdate(commands.Cog):
                     if str(db_user.patreon_id) not in members_with_discord.keys()
                 ]
                 for db_user in removed_users:
-                    removed_tiers = [
-                        str(db_tier.patreon_id) for db_tier in db_user.tiers
-                    ]
-                    discord_member = guild.get_member(db_user.discord_id)
-                    if discord_member is None:
-                        continue
-                    await self.remove_member_tiers(
-                        guild, removed_tiers, db_tiers, discord_member
-                    )
-                    await remove_user(session, server_id, db_user.patreon_id)
-
-                # add or update members
-                for id, member in members_with_discord.items():
-                    if member.discord_id is None:
-                        continue
-                    db_user = await get_user(session, server_id, int(id))
-
-                    discord_member = guild.get_member(member.discord_id)
-                    if discord_member is None:
-                        continue
-
-                    if db_user is not None:
+                    try:
                         removed_tiers = [
-                            str(db_tier.patreon_id)
-                            for db_tier in db_user.tiers
-                            if str(db_tier.patreon_id) not in member.tiers
+                            str(db_tier.patreon_id) for db_tier in db_user.tiers
                         ]
+                        discord_member = guild.get_member(db_user.discord_id)
+                        if discord_member is None:
+                            continue
                         await self.remove_member_tiers(
                             guild, removed_tiers, db_tiers, discord_member
                         )
+                        await remove_user(session, server_id, db_user.patreon_id)
+                    except Exception as e:
+                        self.logger.error(f"Failed to remove patreon user {id}:", e)
 
-                    new_db_tiers = await self.add_member_tiers(
-                        guild, member.tiers, db_tiers, discord_member
-                    )
+                # add or update members
+                for id, member in members_with_discord.items():
+                    try:
+                        if member.discord_id is None:
+                            continue
+                        db_user = await get_user(session, server_id, int(id))
 
-                    if db_user is not None:
-                        db_user.tiers = new_db_tiers
-                        session.add(db_user)
-                        await session.commit()
-                    else:
-                        db_user = await add_user(
-                            session, int(id), member.discord_id, server_id
+                        discord_member = guild.get_member(member.discord_id)
+                        if discord_member is None:
+                            continue
+
+                        if db_user is not None:
+                            removed_tiers = [
+                                str(db_tier.patreon_id)
+                                for db_tier in db_user.tiers
+                                if str(db_tier.patreon_id) not in member.tiers
+                            ]
+                            await self.remove_member_tiers(
+                                guild, removed_tiers, db_tiers, discord_member
+                            )
+
+                        new_db_tiers = await self.add_member_tiers(
+                            guild, member.tiers, db_tiers, discord_member
                         )
+
                         if db_user is not None:
                             db_user.tiers = new_db_tiers
                             session.add(db_user)
                             await session.commit()
+                        else:
+                            db_user = await add_user(
+                                session, int(id), member.discord_id, server_id
+                            )
+                            if db_user is not None:
+                                db_user.tiers = new_db_tiers
+                                session.add(db_user)
+                                await session.commit()
+                    except Exception as e:
+                        self.logger.error(f"Failed to add patreon user {id}:", e)
 
         # config = self.bot.config.bot
         # await self.patreon_api.update_token(

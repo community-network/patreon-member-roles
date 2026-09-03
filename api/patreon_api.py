@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 
 import aiohttp
 
@@ -39,6 +40,7 @@ class PatreonApi(metaclass=Singleton):
     def __init__(self, campaign_id: str, access_token: str):
         self.campaign_id = campaign_id
         self.access_token = access_token
+        self.logger = logging.getLogger("patreon_api")
 
     async def async_init__(self):
         self.session = aiohttp.ClientSession(base_url="https://www.patreon.com")
@@ -87,63 +89,69 @@ class PatreonApi(metaclass=Singleton):
         return tiers
 
     async def fetch_members(self) -> dict[str, MemberInfo]:
-        url = f"/api/oauth2/v2/campaigns/{self.campaign_id}/members"
-        params = {
-            "include": "user,currently_entitled_tiers",
-            "fields[user]": "social_connections",
-        }
+        try:
+            url = f"/api/oauth2/v2/campaigns/{self.campaign_id}/members"
+            params = {
+                "include": "user,currently_entitled_tiers",
+                "fields[user]": "social_connections",
+            }
 
-        headers = {"Authorization": f"Bearer {self.access_token}"}
-        patreons: dict[str, MemberInfo] = {}
+            headers = {"Authorization": f"Bearer {self.access_token}"}
+            patreons: dict[str, MemberInfo] = {}
 
-        end_cursor = False
-        while not end_cursor:
-            async with self.session.get(
-                url, params=params, headers=headers
-            ) as response:
-                patreon_data = await response.json()
-                for data in patreon_data.get("data", []):
-                    discord_user_id = None
-                    for patreon_user in patreon_data.get("included", []):
-                        if patreon_user.get("type") != "user":
-                            continue
+            end_cursor = False
+            while not end_cursor:
+                async with self.session.get(
+                    url, params=params, headers=headers
+                ) as response:
+                    patreon_data = await response.json()
+                    for data in patreon_data.get("data", []):
+                        discord_user_id = None
+                        for patreon_user in patreon_data.get("included", []):
+                            if patreon_user.get("type") != "user":
+                                continue
 
-                        if data["relationships"]["user"]["data"][
-                            "id"
-                        ] != patreon_user.get("id"):
-                            continue
+                            if data["relationships"]["user"]["data"][
+                                "id"
+                            ] != patreon_user.get("id"):
+                                continue
 
-                        patreon_user_data = patreon_user.get("attributes", {})
-                        if not "social_connections" in patreon_user_data:
-                            continue
+                            patreon_user_data = patreon_user.get("attributes", {})
+                            if not "social_connections" in patreon_user_data:
+                                continue
 
-                        discord_data = patreon_user["attributes"]["social_connections"][
-                            "discord"
-                        ]
+                            discord_data = patreon_user["attributes"][
+                                "social_connections"
+                            ]["discord"]
 
-                        if not discord_data or not "user_id" in discord_data:
-                            continue
+                            if not discord_data or not "user_id" in discord_data:
+                                continue
 
-                        discord_user_id = int(discord_data.get("user_id", ""))
+                            discord_user_id = int(discord_data.get("user_id", ""))
 
-                    patreons[data["relationships"]["user"]["data"]["id"]] = MemberInfo(
-                        [
-                            d["id"]
-                            for d in data["relationships"]["currently_entitled_tiers"][
-                                "data"
-                            ]
-                        ],
-                        discord_user_id,
-                    )
+                        patreons[data["relationships"]["user"]["data"]["id"]] = (
+                            MemberInfo(
+                                [
+                                    d["id"]
+                                    for d in data["relationships"][
+                                        "currently_entitled_tiers"
+                                    ]["data"]
+                                ],
+                                discord_user_id,
+                            )
+                        )
 
-                pagination_data = patreon_data["meta"]["pagination"]
-                if (
-                    not pagination_data.get("cursors")
-                    or pagination_data["cursors"].get("next", None) is None
-                ):
-                    end_cursor = True
-                else:
-                    next_cursor_id = pagination_data["cursors"]["next"]
-                    params["page[cursor]"] = next_cursor_id
+                    pagination_data = patreon_data["meta"]["pagination"]
+                    if (
+                        not pagination_data.get("cursors")
+                        or pagination_data["cursors"].get("next", None) is None
+                    ):
+                        end_cursor = True
+                    else:
+                        next_cursor_id = pagination_data["cursors"]["next"]
+                        params["page[cursor]"] = next_cursor_id
 
-        return patreons
+            return patreons
+        except Exception as e:
+            self.logger.error("Failed to get patreon data:", e)
+            return {}
