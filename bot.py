@@ -44,7 +44,7 @@ class PatreonMemberRolesBot(commands.AutoShardedBot):
         logger.info("Bot started")
 
     async def load_cogs(self):
-        for file in os.listdir(os.path.dirname(__file__) + "/cogs"):
+        for file in os.listdir(os.path.dirname(os.path.abspath(__file__)) + "/cogs"):
             if file.endswith(".py"):
                 name = file[:-3]
                 await bot.load_extension(f"cogs.{name}")
