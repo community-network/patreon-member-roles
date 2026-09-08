@@ -128,13 +128,29 @@ class BackgroundUserUpdate(commands.Cog):
                                 for db_tier in db_user.tiers
                                 if str(db_tier.patreon_id) not in member.tiers
                             ]
-                            await self.remove_member_tiers(
+                            db_removed_tiers = await self.remove_member_tiers(
                                 guild, removed_tiers, db_tiers, discord_member
                             )
+                            if len(db_removed_tiers) > 0:
+                                tier_names = [tier.title for tier in db_removed_tiers]
+                                await send_log_message(
+                                    guild,
+                                    session,
+                                    server_id,
+                                    f'Removed tier "{",".join(tier_names)}" from discord user {discord_member.mention}',
+                                )
 
                         new_db_tiers = await self.add_member_tiers(
                             guild, member.tiers, db_tiers, discord_member
                         )
+                        if len(new_db_tiers) > 0:
+                            tier_names = [tier.title for tier in new_db_tiers]
+                            await send_log_message(
+                                guild,
+                                session,
+                                server_id,
+                                f'Added tier "{",".join(tier_names)}" from discord user {discord_member.mention}',
+                            )
 
                         if db_user is not None:
                             db_user.tiers = new_db_tiers
