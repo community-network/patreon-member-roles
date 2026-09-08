@@ -8,6 +8,7 @@ from discord.ext import commands, tasks
 from bot import PatreonMemberRolesBot
 from database.dto.tier_roles import TierRole
 from utils.patreon_users import add_user, get_user, get_users, remove_user
+from utils.send_log_message import send_log_message
 from utils.server_settings import get_server_ids
 from utils.tier_roles import get_tiers
 
@@ -92,8 +93,23 @@ class BackgroundUserUpdate(commands.Cog):
                             guild, removed_tiers, db_tiers, discord_member
                         )
                         await remove_user(session, server_id, db_user.patreon_id)
+                        await send_log_message(
+                            guild,
+                            session,
+                            server_id,
+                            f"Removed patreon user {db_user.patreon_id} of server {server_id}",
+                        )
                     except Exception as e:
-                        self.logger.error(f"Failed to remove patreon user {id}:", e)
+                        self.logger.error(
+                            f"Failed to remove patreon user {db_user.patreon_id} of server {server_id}:",
+                            e,
+                        )
+                        await send_log_message(
+                            guild,
+                            session,
+                            server_id,
+                            f"Failed to remove patreon user {db_user.patreon_id} of server {server_id}: {e}",
+                        )
 
                 # add or update members
                 for id, member in members_with_discord.items():
@@ -133,7 +149,15 @@ class BackgroundUserUpdate(commands.Cog):
                                 session.add(db_user)
                                 await session.commit()
                     except Exception as e:
-                        self.logger.error(f"Failed to add patreon user {id}:", e)
+                        self.logger.error(
+                            f"Failed to add patreon user {id} of server {server_id}:", e
+                        )
+                        await send_log_message(
+                            guild,
+                            session,
+                            server_id,
+                            f"Failed to add patreon user {id} of server {server_id}: {e}",
+                        )
 
         # config = self.bot.config.bot
         # await self.patreon_api.update_token(

@@ -3,6 +3,7 @@ import logging
 import discord
 from discord import app_commands
 from discord.ext import commands
+from utils.server_settings import update_guild
 from utils.tier_roles import add_tier, get_roles, get_tier, get_tiers, remove_tier
 
 from bot import PatreonMemberRolesBot
@@ -172,6 +173,29 @@ class Admin(commands.Cog):
                 return
 
             await interaction.followup.send("Tier wasn't tracked", ephemeral=True)
+
+    set_group = app_commands.Group(
+        name="set", description="Set a setting", parent=group
+    )
+
+    @set_group.command(name="logchannel", description="Set the used log channel")
+    @app_commands.guild_only()
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
+    async def set_category(
+        self, interaction: discord.Interaction, logChannel: discord.TextChannel
+    ) -> None:
+        """Set the used log channel"""
+        await interaction.response.defer()
+        if interaction.guild is None:
+            return  # is already set to guild_only
+        async with self.bot.db.create_session() as session:
+            await update_guild(
+                session, interaction.guild, {"log_channel_id": logChannel.id}
+            )
+        await interaction.followup.send(
+            f'Set the log channel to "{logChannel.name}"', ephemeral=True
+        )
 
 
 async def setup(bot: PatreonMemberRolesBot) -> None:
