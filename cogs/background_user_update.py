@@ -59,6 +59,7 @@ class BackgroundUserUpdate(commands.Cog):
     @tasks.loop(minutes=30)
     async def updateUsers(self):
         async with self.bot.db.create_session() as session:
+            self.logger.info("Running UpdateUsers")
             server_ids = await get_server_ids(session)
             for server_id in server_ids:
                 guild = self.bot.get_guild(server_id)

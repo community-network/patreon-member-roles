@@ -37,25 +37,36 @@ class PatreonApi(metaclass=Singleton):
     session: aiohttp.ClientSession
     campaign_tier_cache: dict[str, CampaignTierCache] = {}
 
-    def __init__(self, campaign_id: str, access_token: str):
+    def __init__(
+        self,
+        campaign_id: str,
+        access_token: str,
+        client_id: str,
+        client_secret: str,
+        refresh_token: str,
+    ):
         self.campaign_id = campaign_id
         self.access_token = access_token
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.refresh_token = refresh_token
         self.logger = logging.getLogger("patreon_api")
 
     async def async_init__(self):
         self.session = aiohttp.ClientSession(base_url="https://www.patreon.com")
 
-    async def update_token(self, client_id: str, client_secret, refresh_token: str):
+    async def update_token(self):
         url = "/api/oauth2/token"
         params = {
             "grant_type": "refresh_token",
-            "refresh_token": refresh_token,
-            "client_id": client_id,
-            "client_secret": client_secret,
+            "refresh_token": self.refresh_token,
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
         }
         async with self.session.post(url, params=params) as response:
             auth_data = await response.json()
-            print(auth_data)
+            self.refresh_token = auth_data.get("refresh_token", "")
+            self.access_token = auth_data.get("access_token", "")
 
     async def fetch_tiers(self) -> list[PatreonTier]:
         cache_entry = self.campaign_tier_cache.get(self.campaign_id, None)
@@ -104,6 +115,9 @@ class PatreonApi(metaclass=Singleton):
                 async with self.session.get(
                     url, params=params, headers=headers
                 ) as response:
+                    # if response.status == 401:
+                    # await self.update_token()
+                    # continue
                     patreon_data = await response.json()
                     for data in patreon_data.get("data", []):
                         discord_user_id = None

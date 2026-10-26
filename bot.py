@@ -27,6 +27,9 @@ class PatreonMemberRolesBot(commands.AutoShardedBot):
         self.patreon_api = PatreonApi(
             campaign_id=self.config.bot.patreon_campaign_id,
             access_token=self.config.bot.patreon_access_token,
+            client_id=self.config.bot.patreon_client_id,
+            client_secret=self.config.bot.patreon_client_secret,
+            refresh_token=self.config.bot.patreon_refresh_token,
         )
         super().__init__(*args, **kwargs)
 
